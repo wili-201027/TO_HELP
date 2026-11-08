@@ -2,7 +2,9 @@
 """
 REACTOR_PARED_DIVERTOR_V15.py
 ============================
-Modelo CAD conceptual integrado para Blender 3.6-4.x. Version V15, con exportación de centrolineas para el motor magnetostático.
+Modelo CAD conceptual integrado para Blender 3.6-4.x. Version V15.
+Añade exportación explícita de las 20 centrolineas de bobina y puertos no-HV
+para que el motor magnetostático independiente use la geometría CAD real.
 V14 amplia los canales de refrigeración y rediseña las bobinas superconductoras de integración de auditoría: asientos de soportes, cobertura de capas,
 boquilla replegada, modo HV excluido por defecto, validación de parámetros y auditoría
 BVH de intersecciones de superficies sólidas.
@@ -2661,11 +2663,11 @@ def build_first_wall_blanket_shield(cols, mats, ports):
     fw_nominal = N_TRACKS * CASSETTES_PER_TRACK * FW_TILES_TOROIDAL * len(panel_bands)
     back_nominal = N_TRACKS * CASSETTES_PER_TRACK * BACKING_TILES_TOROIDAL * len(panel_bands)
     print(f"[V15] Primera pared: {tile_count}/{fw_nominal} submódulos; omitidos por portales: {skipped_fw}.")
-    print(f"[V14] Blanket: {blanket_count}/{back_nominal}; blindaje: {shield_count}/{back_nominal}; "
+    print(f"[V15] Blanket: {blanket_count}/{back_nominal}; blindaje: {shield_count}/{back_nominal}; "
           f"submódulos omitidos por portales/accesos: {skipped_back}.")
-    print("[V14] Corredores de colectores libres en toda la vuelta: " + ", ".join(
+    print("[V15] Corredores de colectores libres en toda la vuelta: " + ", ".join(
         f"{v:.2f}°" for v in map(math.degrees, COLLECTOR_SERVICE_OFFSETS)))
-    print("[V14] Cobertura en bandas libres entre los divertores, con corredores de colectores reservados; no es cobertura integral de 360°.")
+    print("[V15] Cobertura en bandas libres entre los divertores, con corredores de colectores reservados; no es cobertura integral de 360°.")
 
 
 # =============================================================================
@@ -2830,7 +2832,7 @@ def build_hv_test_ignition(cols, mats, ports):
                             HV_TERMINAL_MINOR+0.006,cols["labels"],mats["label_text"],size=0.009)
     create_surface_text("Etiqueta_Sistema_Ignicion_HV","IGNICION HV / SOLO ENSAYO",math.pi,
                         0.5*math.pi,0.490,cols["labels"],mats["label_text"],size=0.009)
-    print("[V14] Ignición HV: dos electrodos helicoidales opuestos; ranuras y bornes aislados independientes.")
+    print("[V15] Ignición HV: dos electrodos helicoidales opuestos; ranuras y bornes aislados independientes.")
 
 
 # =============================================================================
@@ -2935,7 +2937,7 @@ def create_maintenance_access(cols, mats, port):
                 th=theta+(row-0.5)*0.090
                 create_oriented_box(f"Tesela_Cassette_Extraido_R{row+1}_C{col+1}",th,ph,0.482,
                                     (0.052,0.082,0.006),cols["maintenance"],mats["first_wall"])
-    print("[V14] Acceso de mantenimiento: escotilla {} y cassette T01_C02.".format("ABIERTA (demo)" if MAINTENANCE_HATCH_OPEN else "cerrada"))
+    print("[V15] Acceso de mantenimiento: escotilla {} y cassette T01_C02.".format("ABIERTA (demo)" if MAINTENANCE_HATCH_OPEN else "cerrada"))
 
 
 # =============================================================================
@@ -3260,7 +3262,7 @@ def check_solid_mesh_intersections(cols):
     No sustituye un B-rep, una comprobación volumétrica completa ni FEA.
     """
     if not RUN_SOLID_MESH_AUDIT:
-        print("[V14] Auditoría de mallas/rutas desactivada por configuración.")
+        print("[V15] Auditoría de mallas/rutas desactivada por configuración.")
         return []
 
     excluded_collections = {cols["labels"].name, cols["guides"].name, cols["plasma"].name}
@@ -3275,7 +3277,7 @@ def check_solid_mesh_intersections(cols):
         try:
             candidates.append((obj, _world_aabb(obj), "mesh"))
         except Exception as exc:
-            print(f"[V14][AVISO] AABB no disponible para {obj.name}: {exc}")
+            print(f"[V15][AVISO] AABB no disponible para {obj.name}: {exc}")
 
     # Descubrir rutas por su propiedad propia RDV14_ClearanceRoute. No depende
     # del nombre ni de la ubicación de la colección: mover un objeto no lo desregistra.
@@ -3288,7 +3290,7 @@ def check_solid_mesh_intersections(cols):
             continue  # los paquetes elípticos de bobina ya se auditan como sólidos
         if route_kind not in {"cooling", "coolant", "vacuum", "fuel", "hv", "cryo_internal"}:
             audit_msg = f"{obj.name}: marca de ruta con tipo no reconocido '{route_kind}'"
-            print(f"[V14][AVISO] {audit_msg}")
+            print(f"[V15][AVISO] {audit_msg}")
             continue
         try:
             bbox = _world_aabb(obj)
@@ -3297,10 +3299,10 @@ def check_solid_mesh_intersections(cols):
             candidates.append((obj, bbox, "route"))
             route_curve_count += 1
         except Exception as exc:
-            print(f"[V14][AVISO] AABB de ruta no disponible para {obj.name}: {exc}")
+            print(f"[V15][AVISO] AABB de ruta no disponible para {obj.name}: {exc}")
 
     if len(candidates) > SOLID_AUDIT_MAX_OBJECTS:
-        print(f"[V14][INCONCLUSO] {len(candidates)} objetos superan el límite {SOLID_AUDIT_MAX_OBJECTS}; no se declara ausencia de colisiones.")
+        print(f"[V15][INCONCLUSO] {len(candidates)} objetos superan el límite {SOLID_AUDIT_MAX_OBJECTS}; no se declara ausencia de colisiones.")
         return []
 
     candidates.sort(key=lambda item: item[1][0][0])
@@ -3343,7 +3345,7 @@ def check_solid_mesh_intersections(cols):
         active.append(item)
 
     if len(possible_pairs) > SOLID_AUDIT_MAX_PAIRS:
-        print(f"[V14][INCONCLUSO] {len(possible_pairs)} pares superan el límite {SOLID_AUDIT_MAX_PAIRS}; no se declara ausencia de colisiones.")
+        print(f"[V15][INCONCLUSO] {len(possible_pairs)} pares superan el límite {SOLID_AUDIT_MAX_PAIRS}; no se declara ausencia de colisiones.")
         return []
 
     depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -3394,7 +3396,7 @@ def check_solid_mesh_intersections(cols):
                 containments.append((a.name, b.name))
         except Exception as exc:
             audit_errors.append((a.name, b.name, str(exc)))
-            print(f"[V14][AVISO] No se pudo comprobar {a.name} / {b.name}: {exc}")
+            print(f"[V15][AVISO] No se pudo comprobar {a.name} / {b.name}: {exc}")
 
     print("\n========== AUDITORÍA BVH V14 ==========")
     print(f"Mallas sólidas: {sum(1 for _,_,kind in candidates if kind == 'mesh')}")
@@ -3438,6 +3440,9 @@ def export_v15_magnetic_geometry(filepath=None, sample_count=V15_MAGNETIC_EXPORT
     filepath = filepath or V15_MAGNETIC_EXPORT_PATH
     output_path = bpy.path.abspath(filepath)
     specs = build_coil_centerline_samples(sample_count=int(sample_count))
+    # Exportar todos los puertos del CAD excepto HV: los electrodos son un
+    # experimento independiente y no pertenecen al modelo de confinamiento.
+    ports = [p for p in build_port_specs() if p["kind"] != "hv"]
     coils = []
     for name, points, _radius in specs:
         if name.startswith("H"):
@@ -3503,6 +3508,12 @@ def export_v15_magnetic_geometry(filepath=None, sample_count=V15_MAGNETIC_EXPORT
         },
         "current_reference_ratios": dict(V15_CURRENT_REFERENCE_RATIOS),
         "currents_note": "Ratios adopted from the corrected study as a reference scenario; sign convention and net X toroidal contribution must be checked by the field audit.",
+        "ports": [
+            {key: port[key] for key in
+             ("name", "kind", "theta", "phi", "half_theta", "half_phi", "minor_stub")}
+            for port in ports
+        ],
+        "port_note": "HV ports are always omitted from the magnetic geometry export, including in HV_TEST_MODE.",
         "coil_count": len(coils),
         "sample_count_per_coil": int(sample_count),
         "coils": coils,
@@ -3518,7 +3529,7 @@ def export_v15_magnetic_geometry(filepath=None, sample_count=V15_MAGNETIC_EXPORT
 # =============================================================================
 def build_reactor_divertor_v15():
     validation = validate_geometry_parameters()
-    print("[V14] Validaciones dimensionales: ", validation)
+    print("[V15] Validaciones dimensionales: ", validation)
     check_coil_clearances()
     clean_old_system()
     cols=create_collections()
@@ -3542,7 +3553,7 @@ def build_reactor_divertor_v15():
         if legacy_plasma is None or REMOVE_LEGACY_PLASMA_OBJECT:
             create_plasma_reference(cols["plasma"],mats["plasma"])
         else:
-            print("[V14] Se conserva Plasma_Volume_Combined y no se crea una segunda superficie de plasma.")
+            print("[V15] Se conserva Plasma_Volume_Combined y no se crea una segunda superficie de plasma.")
 
     total_cassettes=0
     for track in range(N_TRACKS):
@@ -3564,9 +3575,9 @@ def build_reactor_divertor_v15():
     build_vacuum_exhaust_system(cols,mats)
     if HV_TEST_MODE:
         build_hv_test_ignition(cols,mats,ports)
-        print("[V14] Modo HV de ensayo activo; no se crea el plasma de referencia.")
+        print("[V15] Modo HV de ensayo activo; no se crea el plasma de referencia.")
     else:
-        print("[V14] Electrodos HV omitidos en modo normal; activar HV_TEST_MODE solo para inspección de ensayo.")
+        print("[V15] Electrodos HV omitidos en modo normal; activar HV_TEST_MODE solo para inspección de ensayo.")
 
     build_actual_coil_conductors(cols,mats)
     build_coil_supports(cols,mats)
@@ -3581,18 +3592,18 @@ def build_reactor_divertor_v15():
     check_all_pipe_clearances()
     check_solid_mesh_intersections(cols)
     print_geometry_report(ports)
-    print("[V14] Construcción completada.")
-    print(f"[V14] Cassettes de divertor: {total_cassettes}; primera pared/blanket/blindaje en sectores disponibles.")
-    print("[V14] Bobinas: carcasa 48x64 mm + aislamiento + haz superconductor; doble paso de helio con puente U y dos interfaces por bobina.")
-    print("[V14] Soportes: bastidor intermedio para H/XB y bastidor exterior para XA; puntales cortos en huecos dedicados.")
-    print("[V14] Los radios 0.50–1.50 m se aplican solo al toroide; la envolvente de bobinas se informa por separado.")
-    print("[V14] Inyector: línea de combustible separada y evacuación de precámara conectada al colector común de vacío.")
+    print("[V15] Construcción completada.")
+    print(f"[V15] Cassettes de divertor: {total_cassettes}; primera pared/blanket/blindaje en sectores disponibles.")
+    print("[V15] Bobinas: carcasa 48x64 mm + aislamiento + haz superconductor; doble paso de helio con puente U y dos interfaces por bobina.")
+    print("[V15] Soportes: bastidor intermedio para H/XB y bastidor exterior para XA; puntales cortos en huecos dedicados.")
+    print("[V15] Los radios 0.50–1.50 m se aplican solo al toroide; la envolvente de bobinas se informa por separado.")
+    print("[V15] Inyector: línea de combustible separada y evacuación de precámara conectada al colector común de vacío.")
     if HV_TEST_MODE:
-        print("[V14] Electrodos opuestos de ensayo HV presentes; sin fuente ni parámetros eléctricos de operación.")
-    print("[V14] Escotilla de servicio para T01_C02; modo abierto separa los puentes H01/X02B y muestra una pieza de demostración.")
-    print("[V14] Primera pared, blanket y blindaje cubren las bandas libres entre pistas, con huecos de portales; cobertura y espesores siguen siendo conceptuales.")
-    print("[V14] La boquilla queda retraída fuera de la envolvente geométrica conservadora del plasma; el pistón/resorte sigue siendo una maqueta no dimensionada.")
-    print("[V14] La ruta de evacuación de la precámara termina en el colector anular de la planta de vacío.")
+        print("[V15] Electrodos opuestos de ensayo HV presentes; sin fuente ni parámetros eléctricos de operación.")
+    print("[V15] Escotilla de servicio para T01_C02; modo abierto separa los puentes H01/X02B y muestra una pieza de demostración.")
+    print("[V15] Primera pared, blanket y blindaje cubren las bandas libres entre pistas, con huecos de portales; cobertura y espesores siguen siendo conceptuales.")
+    print("[V15] La boquilla queda retraída fuera de la envolvente geométrica conservadora del plasma; el pistón/resorte sigue siendo una maqueta no dimensionada.")
+    print("[V15] La ruta de evacuación de la precámara termina en el colector anular de la planta de vacío.")
 
 
 if __name__ == "__main__":
